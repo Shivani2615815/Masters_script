@@ -1,0 +1,160 @@
+---
+title: '**Homework_Week5** <br>'
+author: "Shivani"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: true
+    date: "2024-11-10"
+---
+
+# Contents
+
+1. Loading data
+2. Visualizing data
+3. Fitting an appropriate GLM
+4. Assessing the fit of our model
+5. Multiple comparisons test
+6. Plotting co-efficients
+7. Plotting interactions
+8. Summary
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+```
+
+## Loading data
+Loading the penguin data and Filtering NA values
+
+```{r message=FALSE, warning=FALSE}
+#loading the respective libraries
+library(palmerpenguins)
+library(knitr)
+#viewing the data
+kable(head(penguins))
+```
+
+
+```{r}
+#loading the respective libraries
+library(palmerpenguins)
+library(knitr)
+library(tidyverse)
+penguins_filter <-
+  #taking original data set
+  penguins %>%
+  #filtering out any values equal to NA 
+  drop_na(bill_depth_mm, bill_length_mm, flipper_length_mm, body_mass_g, sex)
+  #viewing the filtered data
+kable(head(penguins_filter))
+
+```
+
+## Visualizing data
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+#loading ggplot2
+library(ggplot2)
+#plotting penguin data to view flipper length trend over different species
+ggplot(data = penguins_filter, aes(x = species, y=flipper_length_mm,fill=sex, col=sex))+
+  geom_boxplot(aes(col=species))+
+  theme_bw()
+```
+
+## Fitting an appropriate GLM
+For this analysis, clearly, Species and sex is the predictive variable and flipper length is the response variable.
+Since flipper length data is continuous, the data could be fit into normal distribution.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+#loading the ggpubr library
+library(ggpubr)
+#q-q plot to check if the trend is normal
+ggqqplot(penguins_filter, x="flipper_length_mm", color="sex", facet.by="species")
+```
+
+The above qqplot shows that the data is normally distributed. 
+
+## Assessing the fit of our model
+Let us check gaussian model for our data and view summary for further interpretation
+
+```{r}
+#loading the library
+library(tidyverse)
+penguins_filter <-
+  #taking original data set
+  penguins %>%
+  #filtering out any values equal to NA 
+  drop_na(bill_depth_mm, bill_length_mm, flipper_length_mm, body_mass_g, sex)
+mod_flipper <- glm(flipper_length_mm ~ species*sex,
+                   #specify the data
+                   data = penguins_filter,
+                   #specify the model
+                   family = "gaussian")
+summary(mod_flipper) #checking the summary
+```
+From above table: <br>
+-p value for all the comparisons are <<0.05 <br>
+-Null deviance = 65219 on 332 DOF <br>
+-Residual deviance = 10458 on 327 DOF <br>
+There is huge improvement in deviance value when compared with the main mean and with the inclusion of predictor variables <br>
+-AIC = 2106.9 <br>
+This model suggests that the predictive variables (species and sex) have good explanatory power for predicting flipper length
+
+### Interpretations
+Let us plot some interpretations for model prediction versus the obeserved data.
+Viewing the goodness of the fit using the check_model function
+
+```{r}
+#using performance package
+library(performance)
+check_model(mod_flipper)
+```
+
+Analysing above plots, we could observe that the model predicted data and observed data are quite resembling. There are no severe abnormalities in the plots and hence, we could move on with the further analysis. 
+
+## Multiple comparisons test
+Let us carry out multiple comparison test test to check if there is a significant difference between flipper length and species.
+
+```{r message=FALSE, warning=FALSE}
+#install.packages("multcomp")
+library(multcomp)
+#viewing the summary of the model
+summary(glht(mod_flipper,mcp(species="Tukey")))
+```
+
+p value for Chinstrap - Adelie, Gentoo - Adelie and Gentoo - Chinstrap are all <<0.05. Meaning, the predictor is statistically significant.
+
+## Plotting co-efficients
+
+```{r}
+#loading the library
+library(jtools)
+#producing co-efficient plot
+plot_summs(mod_flipper)
+```
+
+Here, each point refers to the estimated effect of species and sex on the flipper length based on gaussian model.
+
+## Plotting interactions
+```{r}
+#loading the library
+library(jtools)
+library(interactions)
+#building the model
+model <- lm(flipper_length_mm ~ species * sex, data = penguins_filter)
+#plotting the interaction b/w predictive and response variables
+interact_plot(model, pred = species, modx = sex, interval = TRUE)
+```
+
+This plot suggests that species and sex has a varying impact on the flipper length. Since it is already been observed that there is significant difference in flipper lengths between the 3 species, interactively, males have higher flipper length than females.
+This plot is useful for understanding how sex moderates the effect of species on the outcome variable-flipper length.
+
+## Summary
+Refer section 1.4(Fitting a model) for summary of the model and result interpretation.
+

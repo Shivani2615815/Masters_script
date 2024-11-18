@@ -1,0 +1,134 @@
+---
+title: '**Homework_Week3** <br>'
+author: "Shivani"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: true
+    date: "2024-10-07"
+---
+
+# Contents
+
+1. Accessing and saving data
+2. Tidying data
+3. Visualising Data
+4. More Visualisations
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+To produce a short Rmarkdown document involving the process of loading, cleaning, and visualizing the BreedingPairs data in this data set.
+```{r}
+#vroom-ing data to access it from git-hub
+library(vroom)
+Breeding_Pair <- vroom("https://raw.githubusercontent.com/ExperimentalConservation/Bioinformatics_data/master/Workshop%203/wader_data.csv")
+```
+## Accessing and saving data
+
+```{r eval=FALSE, include=FALSE}
+#Saving the file to my local storage as Breeding_Pair.csv
+write.csv(Breeding_Pair,"C:\\Users\\fe24041\\OneDrive - University of Bristol\\Documents\\R_programming\\Week 3\\Breeding_Pair.csv", row.names=FALSE)
+```
+
+Accessing the file into R using knitr package
+```{r}
+#loading the knitr package
+library(knitr)
+Breeding_Pair<- read.csv("C:\\Users\\fe24041\\OneDrive - University of Bristol\\Documents\\R_programming\\Week 3\\Breeding_Pair.csv")
+
+#using kable function from the knitr package to generate table
+kable(Breeding_Pair)
+```
+
+## Tidying data
+Checking the structure of Breeding_Pair_data and summarising the data
+
+```{r include=FALSE}
+library(tidyverse)
+library(Hmisc)
+```
+
+```{r}
+class(Breeding_Pair)
+describe(Breeding_Pair)
+```
+From above analysis, looks like Year and SDMass data are intact. However some values are missing in BreedingPairs(missing 4) and AvgMass(missing 4) columns. 
+
+Removing missing values from the data using drop_na() function
+```{r}
+Breeding_Pair_na <-
+  #taking original data set
+  Breeding_Pair %>%
+  #filtering out any values equal to NA 
+  drop_na(BreedingPairs, AvgMass)
+kable(Breeding_Pair_na)
+```
+
+## Visualising Data
+
+Let's visualize the trend of number of breeding pairs over the year
+
+```{r}
+#making a ggplot
+ggplot(Breeding_Pair_na, aes(x=BreedingPairs, y= Year))+
+  #adding a geom point
+  geom_point()
+```
+
+
+Looking at the plot there is abnormality in the year (2998 doesn't seem right). 
+Let's filter out 2998 from the year column and re-plot with new data set.
+
+```{r}
+#filtering and removing data for the year 2998
+Breeding_Pair_new <- 
+  Breeding_Pair_na %>%
+  filter(Year != 2998) 
+
+#plotting Breeding pair vs Year for the new filtered of data
+ggplot(Breeding_Pair_new, aes(x=Year, y=BreedingPairs))+
+  geom_point()
+```
+
+
+## More Visualizations
+
+Breeding pair vs Year represented as a geom smooth plot.
+
+```{r echo=TRUE}
+ggplot(data = Breeding_Pair_new, aes(x = Year, y = BreedingPairs)) + 
+  geom_smooth(col = "Yellow") 
+```
+
+
+From above plots we can see a decline in number of Breeding pairs over the years 1984 to 2016. 
+
+Now let's consider the relationship between declining number of breedingpairs with their average mass.
+
+```{r echo=TRUE}
+P <- ggplot(data = Breeding_Pair_new, aes(x = Year, y = BreedingPairs))
+
+#adding the graphics 
+P <- P + geom_point(aes(col=AvgMass))
+
+# view the plot
+P
+```
+
+
+Now let's consider the trend of average mass over the years
+
+```{r echo=TRUE}
+ggplot(data = Breeding_Pair_new, aes(x = Year, y = AvgMass)) + 
+  ## points
+  geom_point(col = "darkgrey") +
+  ## and lines! 
+  geom_smooth(col = "pink")
+
+```
+
+From the above plot we can see there is no much variation in average mass over the period (500-550)

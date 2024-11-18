@@ -1,0 +1,181 @@
+---
+title: '**Homework_Week4** <br>'
+author: "Shivani"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: true
+    date: "2024-10-21"
+---
+
+# Contents
+
+1. Loading
+2. Viewing
+3. Filtering
+4. Visualising
+5. Some statistics
+6. Conclusion
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading
+Installing 'palmerpenguins' package and loading into R
+
+'```{r}
+install.packages("palmerpenguins")
+library(palmerpenguins)
+```'
+
+Loading the 'penguins' data using the knitr library; the kable function
+
+'```{r}
+library(knitr)
+kable(penguins)
+```'
+
+On glancing, the data is merely about 3 different penguin species - Adelie, Gentoo and Chinstrap, their bill length, depth, flipper length, sex and their body mass in different islands during the year 2007, 2008 and 2009.
+
+## Viewing
+For the current analysis, let us deep dive into the data to reveal more details
+Using 'class' and 'describe' functions to try and identify any discrepancy in the data
+
+```{r message=FALSE, warning=FALSE}
+library(Hmisc)  #loading hmisc library
+library(palmerpenguins)
+#looking at the data
+class(penguins)
+describe(penguins) #summarising the data
+```
+
+From above table, looks like Year, species and island details are clear. However, some values are missing in rest of the columns.
+
+## Filtering
+
+Removing missing values from the data using drop_na() function and filtering out Chinstrap species since we are focusing only on Adelie and Gentoo species for the current analysis.
+
+```{r message=FALSE, warning=FALSE}
+library(palmerpenguins)
+library(knitr)
+library(tidyverse)
+penguins_filter <-
+  #taking original data set
+  penguins %>%
+  #filtering out any values equal to NA 
+  drop_na(bill_depth_mm, bill_length_mm, flipper_length_mm, body_mass_g, sex) %>%
+  #filtering to remove Chinstrap species from the data
+  filter(species != "Chinstrap") %>%
+  #converting factor to character
+  mutate(species = as.character(species))
+kable(head(penguins_filter))
+```
+
+## Visualising
+
+Now that the data is tidy (we have removed all the missing values) and selective to the Adelie and Gentoo species only, we can plot and check various trends.
+
+### flipper length vs species - a histogram
+
+```{r message=FALSE, warning=FALSE}
+ggplot(data = penguins_filter, aes(x = flipper_length_mm, fill=sex))+
+  geom_histogram(alpha=0.5, position="identity") +
+  facet_wrap(.~species)
+```
+
+
+Above plot is a basic comparison of flipper length between the two species. The differential colour in histogram represents the trend between males and females. Roughly, we could conclude that Adelie species have relatively smaller flipper lengths than that of the Gentoo. 
+To get more insights, let's check if these data are normally distributed.
+
+## Some statistics
+### An overlayed normal distribution over histogram
+
+```{r message=FALSE, warning=FALSE}
+#calculating mean and sd 
+d_summary <-
+  penguins_filter %>% 
+  #split by species
+  group_by(species) %>% 
+  #calculating mean and sd
+  summarise(len_m = mean(flipper_length_mm, na.rm = T),
+            len_sd = sd(flipper_length_mm, na.rm = T))
+
+#creating a full distribution of data, without species difference
+d2<-
+  penguins_filter %>% 
+  #selecting data
+  dplyr::select(-species)
+
+#plotting
+penguins_filter %>% 
+  ggplot() +
+  aes() +
+  #a histogram of penguins_filter data
+  geom_histogram(aes(y = ..density.., x = flipper_length_mm, fill = species)) +
+  #faceting by species
+  facet_wrap(~ species) +
+  #creating the histogram of the full data
+  geom_histogram(data = d2, aes(y = ..density.., x = flipper_length_mm), 
+                 alpha = .5) +
+  #calcualte the normal distrubution of Adelie and overlaying it
+  stat_function(data = d_summary %>% filter(species == "Adelie"),
+                fun = dnorm,
+                args = list(mean = filter(d_summary, 
+                                          species == "Adelie")$len_m,
+                            sd = filter(d_summary, 
+                                        species == "Adelie")$len_sd)) +
+  #calcualte the normal distrubution of Gentoo and overlaying it
+  stat_function(data = d_summary %>% filter(species == "Gentoo"),
+                fun = dnorm,
+                args = list(mean = filter(d_summary, 
+                                          species == "Gentoo")$len_m,
+                            sd = filter(d_summary, 
+                                        species == "Gentoo")$len_sd)) +
+  #setting appearance
+  theme(legend.position = "none",
+        axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  labs(caption = "The grey histograms shows the whole distribution of both Adelie and Gentoo") +
+  #colors
+  scale_fill_brewer(type = "qual", palette = "Set1")
+```
+
+### A qqplot
+
+```{r message=FALSE, warning=FALSE}
+library(ggpubr)
+ggqqplot(penguins_filter, x="flipper_length_mm", color="species")
+
+```
+
+Above plots conclude that the flipper data for the two penguin species is normally distributed. 
+Now we can apply statistical analysis to check our hypothesis.
+Let us assume:
+Null hypothesis(Ho) : There is no difference between the two species.
+Alternate hypothesis(Ha) : There is difference between the two species.
+
+Let's run a student's t-test to check if there is a significant difference between the two species group.
+
+```{r message=FALSE, warning=FALSE}
+library(rstatix) #using rstatix library
+library(knitr)
+t_test <- penguins_filter %>%
+              t_test(flipper_length_mm~species, detailed=T) %>%
+              #return the significances
+              add_significance()
+#print result
+kable(t_test)
+```
+
+## Conclusion
+The obtained p-value is <<<0.05, which indicates that the results obtained are not entirely random, meaning there is likely a significant effect or difference. Hence we can reject our null hypothesis that states 'There is no difference between the two species'.
+
+
+<center>
+<img src="C:/Users/fe24041/OneDrive - University of Bristol/Documents/R_programming/Week 4/pengu.jpg" />
+</center>
+
